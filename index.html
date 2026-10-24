@@ -74,17 +74,22 @@ function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null
 
 /* personal link: …#api=<web app url>&k=<key>. Kept on this phone so the bare page works next time. */
 var P={};location.hash.replace(/^#/,"").split("&").forEach(function(kv){var i=kv.indexOf("=");if(i>0)P[kv.slice(0,i)]=decodeURIComponent(kv.slice(i+1))});
-var API=P.api,KEY=P.k;
+var API=P.api,KEY=P.k,DEV="";
+/* a random ID for this phone: the server links the scanner link to the first phone that uses it */
+try{DEV=localStorage.getItem("vespDev")||"";if(!/^[a-z0-9]{32}$/.test(DEV)){var a=new Uint8Array(16);crypto.getRandomValues(a);DEV=Array.prototype.map.call(a,function(x){return("0"+x.toString(16)).slice(-2)}).join("");localStorage.setItem("vespDev",DEV)}}catch(e){}
 try{if(API&&KEY){localStorage.setItem("vespApi",API);localStorage.setItem("vespKey",KEY);history.replaceState(null,"",location.pathname)}
   else{API=localStorage.getItem("vespApi");KEY=localStorage.getItem("vespKey")}}catch(e){}
 if(!API||!KEY||!/^https:\/\/script\.google(usercontent)?\.com\//.test(API)){$("app").classList.add("hide");$("nolink").classList.remove("hide");$("who").textContent="";return}
 
 function call(params){
   var q=Object.keys(params).map(function(k){return k+"="+encodeURIComponent(params[k])}).join("&");
-  return fetch(API+"?k="+encodeURIComponent(KEY)+"&"+q,{method:"GET",redirect:"follow",cache:"no-store"})
+  return fetch(API+"?k="+encodeURIComponent(KEY)+"&d="+DEV+"&"+q,{method:"GET",redirect:"follow",cache:"no-store"})
     .then(function(r){if(!r.ok)throw new Error("Server error "+r.status);return r.json()})
-    .then(function(d){if(d&&d.error)throw new Error(d.error);return d});
+    .then(function(d){if(d&&d.error){if(d.blocked)lockOut(d.error);throw new Error(d.error)}return d});
 }
+/* link refused (forwarded copy, removed volunteer, new link issued): stop everything */
+function lockOut(msg){try{stopCam()}catch(e){}$("app").classList.add("hide");$("nolink").classList.remove("hide");$("nolink").innerHTML="";
+  $("nolink").appendChild(el("b",null,"Scanner not available"));$("nolink").appendChild(document.createTextNode(msg));$("who").textContent="";$("cnt").textContent="–"}
 function err(t){$("err").textContent=t||"";$("err").classList.toggle("hide",!t)}
 
 /* result card */
