@@ -197,19 +197,36 @@ function post(body){body.k=KEY;body.d=DEV;
     .then(function(d){if(d&&d.error){if(d.blocked)lockOut(d.error);throw new Error(d.error)}return d})}
 var SPOT_API={spec:function(ok,bad){call({action:"spotspec"}).then(ok).catch(bad)},
   submit:function(d,ok,bad){post({action:"spot",data:d}).then(function(r){loadScans();ok(r)}).catch(bad)},
-  resend:function(e,ok,bad){call({action:"resend",email:e}).then(ok).catch(bad)},lookup:function(q,ok,bad){call({action:"lookup",q:q}).then(ok).catch(bad)},
+  resend:function(e,ok,bad){call({action:"resend",email:e}).then(ok).catch(bad)},index:function(ok,bad){call({action:"index"}).then(ok).catch(bad)},recinfo:function(r,ok,bad){call({action:"recinfo",row:r}).then(ok).catch(bad)},
   onOpen:function(){stopCam()},onClose:function(){try{if(localStorage.getItem("vespCam")==="1")startCam(false)}catch(e){}}};
 /* ---------- spot registration (filled by the volunteer on someone's behalf) ---------- */
 (function(){
-var spec=null,busyS=false,pick=null,lt=null,lseq=0;
+var spec=null,busyS=false,pick=null;
 function g(i){return document.getElementById(i)}
 function opts(sel,vals,ph){sel.innerHTML="";var o=document.createElement("option");o.value="";o.textContent=ph;sel.appendChild(o);
   vals.forEach(function(v){var x=document.createElement("option");x.value=v;x.textContent=v;sel.appendChild(x)})}
 function fill(){opts(g("sp_branch"),spec.branches,"Select branch");opts(g("sp_year"),spec.years.slice().reverse(),"Select year")}
-function enrVis(){var y=parseInt(g("sp_year").value,10),rec=pick&&pick.emailMask&&g("sp_emRec").checked;g("sp_enrL").classList.toggle("hide",!(spec&&y>=spec.enrollFrom)||!!rec)}
+function enrVis(){var y=parseInt(g("sp_year").value,10),rec=pick&&pick.he&&g("sp_emRec").checked;g("sp_enrL").classList.toggle("hide",!(spec&&y>=spec.enrollFrom)||!!rec)}
 g("sp_year").onchange=enrVis;
+/* names are searched on the phone itself: instant, no waiting for the server */
+var IDX=null,IDXL=false,BRM={},LBM={},TT={MR:1,MRS:1,MS:1,MISS:1,DR:1,ER:1,PROF:1,SHRI:1,SRI:1,SMT:1,KUM:1,KU:1};
+function toks(n){return String(n||"").toUpperCase().replace(/[^A-Z\s]/g," ").split(/\s+/).filter(function(t){return t&&!TT[t]})}
+function skel(t){var s=t.toLowerCase();s=s.replace(/ee/g,"i").replace(/oo/g,"u").replace(/aa/g,"a").replace(/ph/g,"f").replace(/(.)\1+/g,"$1");
+  s=s.replace(/([bcdgkpt])h/g,"$1").replace(/sh/g,"s").replace(/w/g,"v").replace(/y$/,"i");return s.replace(/(.)\1+/g,"$1")}
+function loadIdx(then){if(IDX){if(then)then();return}if(IDXL)return;IDXL=true;
+  SPOT_API.index(function(d){IDXL=false;BRM=d.branches||{};LBM=d.labels||{};
+    IDX=(d.list||[]).map(function(r){var t=toks(r[1]);return{row:r[0],name:r[1],code:r[2],year:r[3]?String(r[3]):"",admitted:r[4]||"",he:r[5],hp:r[6],t:t,s:t.map(skel)}});
+    if(then)then();else if(g("sp_name").value&&!pick)g("sp_name").oninput()},function(){IDXL=false})}
+function search(q){var qt=toks(q).filter(function(t){return t.length>=2});if(!qt.length)return[];var qs=qt.map(skel),hits=[];
+  for(var n=0;n<IDX.length;n++){var r=IDX[n],sc=0,ok=true;
+    for(var i=0;i<qt.length&&ok;i++){var b=0;for(var j=0;j<r.t.length;j++){if(r.t[j]===qt[i])b=Math.max(b,3);else if(r.t[j].indexOf(qt[i])===0)b=Math.max(b,2);else if(qs[i].length>=3&&r.s[j].indexOf(qs[i])===0)b=Math.max(b,1)}
+      if(!b)ok=false;else sc+=b}
+    if(ok)hits.push([sc,r])}
+  hits.sort(function(a,b){return b[0]-a[0]||a[1].name.length-b[1].name.length});
+  return hits.slice(0,8).map(function(h){var r=h[1];return{row:r.row,name:r.name,code:r.code,year:r.year,admitted:r.admitted,he:r.he,hp:r.hp,branch:BRM[r.code]||"",label:LBM[r.code]||r.code}})}
+setTimeout(function(){try{loadIdx()}catch(e){}},4000);
 /* email / mobile: "on record" (masked, filled on the server) or typed */
-function contactUI(){var re=pick&&pick.emailMask,rp=pick&&pick.phoneMask;
+function contactUI(){var re=pick&&pick.he,rp=pick&&pick.hp;
   g("sp_recEmailBox").classList.toggle("hide",!re);g("sp_emailL").classList.toggle("hide",!!(re&&g("sp_emRec").checked));
   g("sp_recPhoneBox").classList.toggle("hide",!rp);g("sp_phoneL").classList.toggle("hide",!!(rp&&g("sp_phRec").checked));enrVis()}
 ["sp_emRec","sp_emNew","sp_phRec","sp_phNew"].forEach(function(i){g(i).onchange=contactUI});
@@ -218,17 +235,20 @@ g("sp_unmatch").onclick=function(){unmatch();g("sp_name").focus()};
 function choose(s){pick=s;g("sp_name").value=s.name;g("sp_sugg").classList.add("hide");
   if(s.branch)g("sp_branch").value=s.branch;if(s.year&&spec&&spec.years.indexOf(s.year)>=0)g("sp_year").value=s.year;enrVis();
   g("sp_matchTxt").textContent="✓ Matched to record: "+s.name+" · "+s.code+" · "+(s.year||"");g("sp_match").classList.remove("hide");
-  g("sp_emRec").checked=true;g("sp_phRec").checked=true;g("sp_emMask").textContent=s.emailMask||"";g("sp_phMask").textContent=s.phoneMask||"";contactUI()}
+  g("sp_emRec").checked=true;g("sp_phRec").checked=true;g("sp_emMask").textContent=s.he?"…":"";g("sp_phMask").textContent=s.hp?"…":"";contactUI();
+  if(s.he||s.hp)SPOT_API.recinfo(s.row,function(m){if(pick!==s)return;g("sp_emMask").textContent=m.emailMask||"";g("sp_phMask").textContent=m.phoneMask||""},function(){})}
 function suggest(list){var S=g("sp_sugg");S.innerHTML="";S.classList.remove("hide");
   if(!list.length){S.appendChild(el("div","none","No match in our records. Fill in the details by hand."));return}
   list.forEach(function(s){var b=el("button",null,s.name);b.type="button";b.appendChild(el("small",null,[s.label,s.year?"passed "+s.year:"",s.admitted?"joined "+s.admitted:""].filter(Boolean).join(" · ")));
     b.onclick=function(){choose(s)};S.appendChild(b)})}
-g("sp_name").oninput=function(){if(pick&&this.value!==pick.name)unmatch();clearTimeout(lt);var q=this.value;
+g("sp_name").oninput=function(){var f=g("sp_name");if(pick&&f.value!==pick.name)unmatch();var q=f.value;
   if(q.replace(/[^A-Za-z]/g,"").length<3){g("sp_sugg").classList.add("hide");return}
-  lt=setTimeout(function(){var my=++lseq;SPOT_API.lookup(q,function(list){if(my===lseq&&!pick)suggest(list||[])},function(){})},350)};
+  if(!IDX){var S=g("sp_sugg");S.innerHTML="";S.classList.remove("hide");S.appendChild(el("div","none","Loading alumni names… (first time only)"));loadIdx();return}
+  if(!pick)suggest(search(q))};
 function goBtn(on){var b=g("sp_go");b.disabled=!on;b.textContent=on?"Register & email pass":"Registering… (up to 20 seconds)"}
 function resetForm(){g("spotF").reset();unmatch();g("sp_sugg").classList.add("hide");g("sp_enrL").classList.add("hide");g("spotF").classList.remove("hide");g("spotRes").classList.add("hide");goBtn(true)}
 function openSpot(){if(SPOT_API.onOpen)SPOT_API.onOpen();g("spotBox").classList.remove("hide");g("spotBtn").classList.add("hide");resetForm();
+  loadIdx();
   if(!spec)SPOT_API.spec(function(s){spec=s;fill()},function(e){showRes({tone:"red",title:"Could not load the form",msg:String(e&&e.message||e)})});
   setTimeout(function(){g("spotBox").scrollIntoView({behavior:"smooth",block:"start"})},50)}
 function closeSpot(){g("spotBox").classList.add("hide");g("spotBtn").classList.remove("hide");if(SPOT_API.onClose)SPOT_API.onClose()}
