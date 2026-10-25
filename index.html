@@ -99,7 +99,7 @@ input{flex:2;border:1px solid #d1d5db;border-radius:12px;padding:13px;font-size:
         <label class="chk"><input type="radio" name="sp_ph" id="sp_phRec" checked> Mobile on record <b id="sp_phMask"></b></label>
         <label class="chk"><input type="radio" name="sp_ph" id="sp_phNew"> Use a different mobile</label>
       </div>
-      <label id="sp_phoneL">Mobile<input id="sp_phone" type="tel" inputmode="numeric"></label>
+      <label id="sp_phoneL">Mobile <small>(10 digits)</small><input id="sp_phone" type="tel" inputmode="numeric" maxlength="16"></label>
       <details><summary>More details (optional)</summary>
         <label>Organisation / College<input id="sp_org"></label>
         <label>Designation<input id="sp_desig"></label></details>
@@ -197,7 +197,7 @@ function post(body){body.k=KEY;body.d=DEV;
     .then(function(d){if(d&&d.error){if(d.blocked)lockOut(d.error);throw new Error(d.error)}return d})}
 var SPOT_API={spec:function(ok,bad){call({action:"spotspec"}).then(ok).catch(bad)},
   submit:function(d,ok,bad){post({action:"spot",data:d}).then(function(r){loadScans();ok(r)}).catch(bad)},
-  resend:function(e,ok,bad){call({action:"resend",email:e}).then(ok).catch(bad)},index:function(ok,bad){call({action:"index"}).then(ok).catch(bad)},recinfo:function(r,ok,bad){call({action:"recinfo",row:r}).then(ok).catch(bad)},
+  resend:function(e,ok,bad){call({action:"resend",email:e}).then(ok).catch(bad)},send:function(k,sh,o,ok,bad){call({action:"spotsend",key:k,shown:sh,onRecord:o}).then(ok).catch(bad)},index:function(ok,bad){call({action:"index"}).then(ok).catch(bad)},recinfo:function(r,ok,bad){call({action:"recinfo",row:r}).then(ok).catch(bad)},
   onOpen:function(){stopCam()},onClose:function(){try{if(localStorage.getItem("vespCam")==="1")startCam(false)}catch(e){}}};
 /* ---------- spot registration (filled by the volunteer on someone's behalf) ---------- */
 (function(){
@@ -245,7 +245,7 @@ g("sp_name").oninput=function(){var f=g("sp_name");if(pick&&f.value!==pick.name)
   if(q.replace(/[^A-Za-z]/g,"").length<3){g("sp_sugg").classList.add("hide");return}
   if(!IDX){var S=g("sp_sugg");S.innerHTML="";S.classList.remove("hide");S.appendChild(el("div","none","Loading alumni names… (first time only)"));loadIdx();return}
   if(!pick)suggest(search(q))};
-function goBtn(on){var b=g("sp_go");b.disabled=!on;b.textContent=on?"Register & email pass":"Registering… (up to 20 seconds)"}
+function goBtn(on){var b=g("sp_go");b.disabled=!on;b.textContent=on?"Register & email pass":"Checking…"}
 function resetForm(){g("spotF").reset();unmatch();g("sp_sugg").classList.add("hide");g("sp_enrL").classList.add("hide");g("spotF").classList.remove("hide");g("spotRes").classList.add("hide");goBtn(true)}
 function openSpot(){if(SPOT_API.onOpen)SPOT_API.onOpen();g("spotBox").classList.remove("hide");g("spotBtn").classList.add("hide");resetForm();
   loadIdx();
@@ -262,16 +262,25 @@ function showRes(r){var R=g("spotRes");R.innerHTML="";R.classList.remove("hide")
   if(r.title==="Check the details"||r.title==="Error"){var fx=el("button",null,"Fix details");fx.type="button";fx.onclick=function(){g("spotRes").classList.add("hide");g("spotF").classList.remove("hide");goBtn(true)};row.appendChild(fx)}
   var an=el("button",null,"Register another");an.type="button";an.onclick=resetForm;row.appendChild(an);
   var bk=el("button","pri","Back to scanner");bk.type="button";bk.onclick=closeSpot;row.appendChild(bk);R.appendChild(row)}
+function mob(x){var d=String(x||"").replace(/\D/g,"");if(d.length===12&&d.indexOf("91")===0)d=d.slice(2);else if(d.length===11&&d[0]==="0")d=d.slice(1);return /^[6-9]\d{9}$/.test(d)?d:""}
+function tok2(n){return String(n||"").replace(/[^A-Za-z\s]/g," ").trim().split(/\s+/).filter(Boolean).length}
 g("spotBtn").onclick=openSpot;g("spotX").onclick=closeSpot;
 g("spotF").onsubmit=function(e){e.preventDefault();if(busyS)return;
   var useE=!!(pick&&pick.emailMask&&g("sp_emRec").checked),useP=!!(pick&&pick.phoneMask&&g("sp_phRec").checked);
-  if(!useE&&!g("sp_email").value.trim()){alert("Enter an email: the QR pass is sent there.");g("sp_email").focus();return}
-  if(!useP&&!g("sp_phone").value.trim()){alert("Enter a mobile number.");g("sp_phone").focus();return}
+  var em=g("sp_email").value.trim().toLowerCase(),ph=mob(g("sp_phone").value);
+  if(!useE&&!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(em)){alert("Enter a valid email: the QR pass is sent there.");g("sp_email").focus();return}
+  if(!useP&&!ph){alert("Enter a valid 10-digit mobile number (starting with 6, 7, 8 or 9).");g("sp_phone").focus();return}
+  if(tok2(g("sp_name").value)<2){alert("Enter the full name: first name and surname.");g("sp_name").focus();return}
+  if(!g("sp_branch").value||!g("sp_year").value){alert("Select the branch and year of passing.");return}
+  if(!useE&&!confirm("Send the QR pass to:\n\n"+em+"\n\nRead it out to them. Is it correct?"))return;
   busyS=true;goBtn(false);
   var d={name:g("sp_name").value,oldname:g("sp_old").value,branch:g("sp_branch").value,year:g("sp_year").value,enrollment:g("sp_enr").value,
     email:useE?"":g("sp_email").value,phone:useP?"":g("sp_phone").value,org:g("sp_org").value,desig:g("sp_desig").value,
     rec:pick?pick.row:"",useRecEmail:useE,useRecPhone:useP};
-  SPOT_API.submit(d,function(r){busyS=false;showRes(r)},
+  SPOT_API.submit(d,function(r){busyS=false;showRes(r);
+      /* step 2: email the pass now (the result above is already on screen) */
+      if(r.sendKey)SPOT_API.send(r.sendKey,r.email,!!r.onRecord,function(x){if(!g("spotRes").classList.contains("hide"))showRes(x)},
+        function(){showRes({tone:"amber",title:"Verified",name:r.name,sub:r.sub,msg:"Registered. The QR pass will be emailed within 5 minutes."})})},
     function(e){busyS=false;showRes({tone:"red",title:"Error",msg:String(e&&e.message||e)+". Check the internet; tap Fix details and try again."})})};
 })();
 function startApp(){loadScans();try{if(localStorage.getItem("vespCam")==="1")startCam(false)}catch(e){}}
