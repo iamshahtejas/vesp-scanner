@@ -44,6 +44,23 @@ input{flex:2;border:1px solid #d1d5db;border-radius:12px;padding:13px;font-size:
 .l1 span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.l1 .tm{font-weight:400;color:#6b7280;font-size:12px;white-space:nowrap}
 .l2{font-size:12px;color:#6b7280;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .muted{color:#6b7280;font-size:13px;text-align:center;padding:16px}
+.spotBtn{display:block;width:100%;margin-top:12px;background:#fff;color:#1d4ed8;border:2px dashed #93c5fd;box-shadow:none;font-size:16px;padding:14px;border-radius:12px;font-weight:700}
+.spot{background:#fff;border-radius:16px;padding:14px;margin-top:12px}
+.spotHd{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}.spotHd b{font-size:17px}
+.spotHd button{flex:none;width:auto;padding:6px 12px;font-size:14px;box-shadow:none;background:#f3f4f6;color:#111827}
+.spot label{display:block;font-size:13px;font-weight:600;color:#374151;margin-top:10px}.spot label small{font-weight:400;color:#6b7280}
+.spot input,.spot select{display:block;width:100%;margin-top:4px;border:1px solid #d1d5db;border-radius:10px;padding:12px;font-size:16px;text-transform:none;background:#fff;font-family:inherit;color:#111827}
+.spot details{margin-top:12px;font-size:14px;color:#374151}.spot summary{cursor:pointer;font-weight:600}
+.spot .big{margin-top:16px}
+.spotCard{border-radius:14px;padding:16px;color:#fff;text-align:center;background:#6b7280}.spotCard.green{background:#1e8e3e}.spotCard.amber{background:#e37400}.spotCard.red{background:#d93025}
+.spotCard .t{font-size:22px;font-weight:800}.spotCard .nm{font-size:17px;font-weight:600;margin-top:4px;word-break:break-word}.spotCard .m{font-size:14px;margin-top:8px;line-height:1.45}
+.sugg{border:1px solid #d1d5db;border-radius:10px;margin-top:4px;overflow:hidden}
+.sugg button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #f3f4f6;border-radius:0;box-shadow:none;background:#fff;padding:10px 12px;font-size:15px;font-weight:600;color:#111827}
+.sugg button small{display:block;font-weight:400;color:#6b7280;font-size:12px;margin-top:2px}.sugg .none{padding:10px 12px;font-size:13px;color:#6b7280}
+.matched{display:flex;align-items:center;gap:8px;margin-top:8px;background:#ecfdf5;color:#065f46;border-radius:10px;padding:8px 10px;font-size:13px;font-weight:600}
+.matched span{flex:1}.matched button{flex:none;width:auto;padding:6px 10px;font-size:13px;box-shadow:none;background:#fff;color:#065f46}
+.spot label.chk{display:flex;align-items:center;justify-content:flex-start;gap:8px;font-weight:500;margin-top:8px;text-align:left}.spot label.chk input{display:inline-block;flex:none;width:18px;height:18px;margin:0;padding:0}
+.spot .row{flex-wrap:wrap}.spot .row button{flex:1 1 40%;font-size:15px}.spot .pri{background:#2563eb;color:#fff}
 .gate{padding:48px 24px;text-align:center;color:#374151}.gate b{font-size:22px;display:block;margin-bottom:8px}
 </style>
 </head>
@@ -62,6 +79,34 @@ input{flex:2;border:1px solid #d1d5db;border-radius:12px;padding:13px;font-size:
   <button class="big" id="startBtn" type="button">Start scanner</button>
   <div class="msg hide" id="err"></div>
   <form class="row" id="mf"><input id="code" placeholder="Type pass code" autocomplete="off"><button type="submit">Check</button></form>
+  <button type="button" class="spotBtn" id="spotBtn">＋ Spot registration</button>
+  <div class="spot hide" id="spotBox">
+    <div class="spotHd"><b>Spot registration</b><button type="button" id="spotX">Close</button></div>
+    <form id="spotF" autocomplete="off">
+      <label>Full name <small>(type 3+ letters to find them in our records)</small><input id="sp_name" required autocomplete="off" spellcheck="false"></label>
+      <div class="sugg hide" id="sp_sugg"></div>
+      <div class="matched hide" id="sp_match"><span id="sp_matchTxt"></span><button type="button" id="sp_unmatch">Clear</button></div>
+      <label>Earlier name, if changed <small>(optional)</small><input id="sp_old"></label>
+      <label>Branch<select id="sp_branch" required><option value="">Loading…</option></select></label>
+      <label>Year of passing<select id="sp_year" required><option value="">Loading…</option></select></label>
+      <label id="sp_enrL" class="hide">MSBTE enrollment no. <small>(optional, confirms instantly)</small><input id="sp_enr" inputmode="numeric"></label>
+      <div class="hide" id="sp_recEmailBox">
+        <label class="chk"><input type="radio" name="sp_em" id="sp_emRec" checked> Send pass to email on record <b id="sp_emMask"></b></label>
+        <label class="chk"><input type="radio" name="sp_em" id="sp_emNew"> Use a different email</label>
+      </div>
+      <label id="sp_emailL">Email <small>(the QR pass is sent here)</small><input id="sp_email" type="email"></label>
+      <div class="hide" id="sp_recPhoneBox">
+        <label class="chk"><input type="radio" name="sp_ph" id="sp_phRec" checked> Mobile on record <b id="sp_phMask"></b></label>
+        <label class="chk"><input type="radio" name="sp_ph" id="sp_phNew"> Use a different mobile</label>
+      </div>
+      <label id="sp_phoneL">Mobile<input id="sp_phone" type="tel" inputmode="numeric"></label>
+      <details><summary>More details (optional)</summary>
+        <label>Organisation / College<input id="sp_org"></label>
+        <label>Designation<input id="sp_desig"></label></details>
+      <button type="submit" class="big" id="sp_go">Register &amp; email pass</button>
+    </form>
+    <div id="spotRes" class="hide"></div>
+  </div>
   <div class="hd3"><h3 id="scanTitle">My scans</h3><button id="scanRef" type="button">Refresh</button></div>
   <div class="sum" id="sum"></div><div id="scans"><div class="muted">Loading…</div></div>
 </div>
@@ -146,6 +191,69 @@ function loadScans(){call({action:"scans"}).then(function(d){
 }).catch(function(e){$("who").textContent="Not connected";$("scans").innerHTML="";err(String(e.message||e))})}
 $("scanRef").onclick=loadScans;
 
+function post(body){body.k=KEY;body.d=DEV;
+  return fetch(API,{method:"POST",redirect:"follow",cache:"no-store",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)})
+    .then(function(r){if(!r.ok)throw new Error("Server error "+r.status);return r.json()})
+    .then(function(d){if(d&&d.error){if(d.blocked)lockOut(d.error);throw new Error(d.error)}return d})}
+var SPOT_API={spec:function(ok,bad){call({action:"spotspec"}).then(ok).catch(bad)},
+  submit:function(d,ok,bad){post({action:"spot",data:d}).then(function(r){loadScans();ok(r)}).catch(bad)},
+  resend:function(e,ok,bad){call({action:"resend",email:e}).then(ok).catch(bad)},lookup:function(q,ok,bad){call({action:"lookup",q:q}).then(ok).catch(bad)},
+  onOpen:function(){stopCam()},onClose:function(){try{if(localStorage.getItem("vespCam")==="1")startCam(false)}catch(e){}}};
+/* ---------- spot registration (filled by the volunteer on someone's behalf) ---------- */
+(function(){
+var spec=null,busyS=false,pick=null,lt=null,lseq=0;
+function g(i){return document.getElementById(i)}
+function opts(sel,vals,ph){sel.innerHTML="";var o=document.createElement("option");o.value="";o.textContent=ph;sel.appendChild(o);
+  vals.forEach(function(v){var x=document.createElement("option");x.value=v;x.textContent=v;sel.appendChild(x)})}
+function fill(){opts(g("sp_branch"),spec.branches,"Select branch");opts(g("sp_year"),spec.years.slice().reverse(),"Select year")}
+function enrVis(){var y=parseInt(g("sp_year").value,10),rec=pick&&pick.emailMask&&g("sp_emRec").checked;g("sp_enrL").classList.toggle("hide",!(spec&&y>=spec.enrollFrom)||!!rec)}
+g("sp_year").onchange=enrVis;
+/* email / mobile: "on record" (masked, filled on the server) or typed */
+function contactUI(){var re=pick&&pick.emailMask,rp=pick&&pick.phoneMask;
+  g("sp_recEmailBox").classList.toggle("hide",!re);g("sp_emailL").classList.toggle("hide",!!(re&&g("sp_emRec").checked));
+  g("sp_recPhoneBox").classList.toggle("hide",!rp);g("sp_phoneL").classList.toggle("hide",!!(rp&&g("sp_phRec").checked));enrVis()}
+["sp_emRec","sp_emNew","sp_phRec","sp_phNew"].forEach(function(i){g(i).onchange=contactUI});
+function unmatch(){pick=null;g("sp_match").classList.add("hide");g("sp_emRec").checked=true;g("sp_phRec").checked=true;contactUI()}
+g("sp_unmatch").onclick=function(){unmatch();g("sp_name").focus()};
+function choose(s){pick=s;g("sp_name").value=s.name;g("sp_sugg").classList.add("hide");
+  if(s.branch)g("sp_branch").value=s.branch;if(s.year&&spec&&spec.years.indexOf(s.year)>=0)g("sp_year").value=s.year;enrVis();
+  g("sp_matchTxt").textContent="✓ Matched to record: "+s.name+" · "+s.code+" · "+(s.year||"");g("sp_match").classList.remove("hide");
+  g("sp_emRec").checked=true;g("sp_phRec").checked=true;g("sp_emMask").textContent=s.emailMask||"";g("sp_phMask").textContent=s.phoneMask||"";contactUI()}
+function suggest(list){var S=g("sp_sugg");S.innerHTML="";S.classList.remove("hide");
+  if(!list.length){S.appendChild(el("div","none","No match in our records. Fill in the details by hand."));return}
+  list.forEach(function(s){var b=el("button",null,s.name);b.type="button";b.appendChild(el("small",null,[s.label,s.year?"passed "+s.year:"",s.admitted?"joined "+s.admitted:""].filter(Boolean).join(" · ")));
+    b.onclick=function(){choose(s)};S.appendChild(b)})}
+g("sp_name").oninput=function(){if(pick&&this.value!==pick.name)unmatch();clearTimeout(lt);var q=this.value;
+  if(q.replace(/[^A-Za-z]/g,"").length<3){g("sp_sugg").classList.add("hide");return}
+  lt=setTimeout(function(){var my=++lseq;SPOT_API.lookup(q,function(list){if(my===lseq&&!pick)suggest(list||[])},function(){})},350)};
+function goBtn(on){var b=g("sp_go");b.disabled=!on;b.textContent=on?"Register & email pass":"Registering… (up to 20 seconds)"}
+function resetForm(){g("spotF").reset();unmatch();g("sp_sugg").classList.add("hide");g("sp_enrL").classList.add("hide");g("spotF").classList.remove("hide");g("spotRes").classList.add("hide");goBtn(true)}
+function openSpot(){if(SPOT_API.onOpen)SPOT_API.onOpen();g("spotBox").classList.remove("hide");g("spotBtn").classList.add("hide");resetForm();
+  if(!spec)SPOT_API.spec(function(s){spec=s;fill()},function(e){showRes({tone:"red",title:"Could not load the form",msg:String(e&&e.message||e)})});
+  setTimeout(function(){g("spotBox").scrollIntoView({behavior:"smooth",block:"start"})},50)}
+function closeSpot(){g("spotBox").classList.add("hide");g("spotBtn").classList.remove("hide");if(SPOT_API.onClose)SPOT_API.onClose()}
+function showRes(r){var R=g("spotRes");R.innerHTML="";R.classList.remove("hide");g("spotF").classList.add("hide");
+  var c=el("div","spotCard "+(r.tone||""));c.appendChild(el("div","t",r.title||""));if(r.name)c.appendChild(el("div","nm",r.name));
+  if(r.sub)c.appendChild(el("div","m",r.sub));if(r.msg)c.appendChild(el("div","m",r.msg));R.appendChild(c);
+  var row=el("div","row");
+  if(r.canResend&&r.email){var rs=el("button",null,"Resend pass");rs.type="button";rs.onclick=function(){rs.disabled=true;rs.textContent="Sending…";
+    SPOT_API.resend(r.key||r.email,function(x){showRes({tone:x.tone,title:x.title,name:r.name,sub:r.sub,msg:x.msg,email:r.email,key:r.key,canResend:x.tone==="green"})},
+      function(e){rs.disabled=false;rs.textContent="Resend pass";alert(String(e&&e.message||e))})};row.appendChild(rs)}
+  if(r.title==="Check the details"||r.title==="Error"){var fx=el("button",null,"Fix details");fx.type="button";fx.onclick=function(){g("spotRes").classList.add("hide");g("spotF").classList.remove("hide");goBtn(true)};row.appendChild(fx)}
+  var an=el("button",null,"Register another");an.type="button";an.onclick=resetForm;row.appendChild(an);
+  var bk=el("button","pri","Back to scanner");bk.type="button";bk.onclick=closeSpot;row.appendChild(bk);R.appendChild(row)}
+g("spotBtn").onclick=openSpot;g("spotX").onclick=closeSpot;
+g("spotF").onsubmit=function(e){e.preventDefault();if(busyS)return;
+  var useE=!!(pick&&pick.emailMask&&g("sp_emRec").checked),useP=!!(pick&&pick.phoneMask&&g("sp_phRec").checked);
+  if(!useE&&!g("sp_email").value.trim()){alert("Enter an email: the QR pass is sent there.");g("sp_email").focus();return}
+  if(!useP&&!g("sp_phone").value.trim()){alert("Enter a mobile number.");g("sp_phone").focus();return}
+  busyS=true;goBtn(false);
+  var d={name:g("sp_name").value,oldname:g("sp_old").value,branch:g("sp_branch").value,year:g("sp_year").value,enrollment:g("sp_enr").value,
+    email:useE?"":g("sp_email").value,phone:useP?"":g("sp_phone").value,org:g("sp_org").value,desig:g("sp_desig").value,
+    rec:pick?pick.row:"",useRecEmail:useE,useRecPhone:useP};
+  SPOT_API.submit(d,function(r){busyS=false;showRes(r)},
+    function(e){busyS=false;showRes({tone:"red",title:"Error",msg:String(e&&e.message||e)+". Check the internet; tap Fix details and try again."})})};
+})();
 function startApp(){loadScans();try{if(localStorage.getItem("vespCam")==="1")startCam(false)}catch(e){}}
 if(ACT){
   /* one-time activation code from the signed-in web app: swap it for this phone's session */
