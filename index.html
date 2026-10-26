@@ -147,7 +147,16 @@ function beep(ok){try{ac=ac||new (window.AudioContext||window.webkitAudioContext
 function card(tone,t,n,s,x,tag){$("card").className="card "+(tone||"");$("ct").textContent=t||"";$("cn").textContent=n||"";$("cs").textContent=s||"";$("cx").textContent=x||"";$("ctag").textContent=tag||"";$("ctag").classList.toggle("hide",!tag)}
 function ready(){busy=false;card("","Ready",stream?"Point at the next pass":"Tap Start scanner","","")}
 function show(r){card(r.tone,r.title,r.name,r.sub,r.note,r.tag);beep(r.tone==="green");if(navigator.vibrate)navigator.vibrate(r.tone==="green"?120:[200,100,200]);
-  if(r.stats)$("cnt").textContent=r.stats.entered+" / "+r.stats.issued;loadScans();setTimeout(ready,r.tone==="green"?2200:3500)}
+  if(r.stats)$("cnt").textContent=r.stats.entered+" / "+r.stats.issued;addLocal(r);setTimeout(ready,r.tone==="green"?2200:3500)}
+/* add a scan to the list on the phone straight away; the full list refreshes every 30 seconds */
+var myIn=null;
+function addLocal(r){var L=$("scans");if(!L)return;var m=L.querySelector(".muted");if(m)m.remove();
+  var row=el("div","scan");row.appendChild(el("span","dot d-"+r.tone));var b=el("div","bd"),l1=el("div","l1");
+  l1.appendChild(el("span",null,r.title+(r.name?" · "+r.name:"")));l1.appendChild(el("span","tm",new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})));b.appendChild(l1);
+  if(r.sub)b.appendChild(el("div","l2",r.sub));row.appendChild(b);L.insertBefore(row,L.firstChild);while(L.children.length>60)L.removeChild(L.lastChild);
+  if(r.tone==="green"){var S=document.querySelector("#scanSum span,#sum span");if(S&&/^You let in/.test(S.textContent)){var n=parseInt(S.textContent.replace(/\D/g,""),10)||0;S.textContent="You let in "+(n+1)}}}
+setInterval(function(){if(!document.hidden&&KEY)loadScans()},30000);
+
 function check(raw){raw=String(raw||"").trim();if(!raw||busy)return;var now=Date.now();if(raw===last&&now-lastAt<15000)return;last=raw;lastAt=now;busy=true;inflight=true;card("","Checking…","","","");
   call({action:"check",code:raw}).then(function(r){inflight=false;show(r)}).catch(function(e){inflight=false;card("red","Error",String(e.message||e),"Check the internet and try again","");setTimeout(ready,3500)})}
 
